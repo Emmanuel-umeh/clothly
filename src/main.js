@@ -4,11 +4,9 @@ import { newKitFromWeb3 } from '@celo/contractkit'
 import BigNumber from "bignumber.js"
 import ClothlyAbi from '../contract/clothly.abi.json'
 import erc20Abi from '../contract/erc20.abi.json'
+import {ClothyContractAddress, ERC20_DECIMALS, cUSDContractAddress} from "./utils/constants";
 
 // setting global var, let, const
-const ERC20_DECIMALS = 18
-const ClothyContractAddress = "0x697b35aA8c63CC9Cc0c586F914b2b0dC1a3A1Fce" // clothly contact address
-const cUSDContractAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1" // cUSD contract address
 
 let kit // the kit
 let cart = [] // cart object to contain the cart cloth array (array of object)
@@ -49,10 +47,10 @@ async function approve(_price) {
     // setting the cUSD contract on the web3 using the kit
     const cUSDContract = new kit.web3.eth.Contract(erc20Abi, cUSDContractAddress)
 
-    const result = await cUSDContract.methods
+    return  await cUSDContract.methods
         .approve(ClothyContractAddress, _price)
         .send({ from: kit.defaultAccount })
-    return result
+
 }
 
 // getting total balance in cUSD
@@ -69,7 +67,7 @@ const getClothes = async function () {
     const _clothesLength = await contract.methods.getClothesLength().call()
     const _clothes = []
     for (let i = 0; i < _clothesLength; i++) {
-        let _cloth = new Promise(async (resolve, reject) => {
+        let _cloth = new Promise(async (resolve) => {
             let p = await contract.methods.readCloth(i).call()
             resolve({
                 index: i,
@@ -196,7 +194,7 @@ document
             notification('"FORM" Can not be empty!!!')
         } else {
             try {
-                const result = await contract.methods
+                await contract.methods
                     .writeCloth(..._cloth)
                     .send({ from: kit.defaultAccount })
             } catch (error) {
@@ -224,11 +222,11 @@ document.querySelector("#clothes").addEventListener("click", async (e) => {
         }
         notification(`⌛ Awaiting payment for "${clothes[index].name}"...`)
         try {
-            const result = await contract.methods
+           await contract.methods
                 .buyCloth(index)
                 .send({ from: kit.defaultAccount })
             notification(`🎉 You successfully bought "${clothes[index].name}".`)
-            console.log(result)
+
             getClothes()
             getBalance()
         } catch (error) {
@@ -261,11 +259,7 @@ document.querySelector("#clothes").addEventListener("click", (e) => {
         // check if item is already in cart
         if (cart.length > 0) {
             cart.forEach(item => {
-                if (item.index === _cloth.index) {
-                    isInCart = true;
-                } else {
-                    isInCart = false;
-                }
+                isInCart = item.index === _cloth.index;
             })
         }
 
@@ -320,7 +314,7 @@ document.querySelector("#buyCart").addEventListener("click", async (e) => {
                 })
                 await contract.methods.clearCartAddress() // clear the cart address in contract
                 await contract.methods.addCartAddress(cartAddress) // add new cart addresses in contract
-                const result = await contract.methods.buyCart(totalSumPrice) // call the buy cart
+                await contract.methods.buyCart(totalSumPrice) // call the buy cart
 
                 notification(`You successfully bought "${totalSumPrice.shiftedBy(-ERC20_DECIMALS).toFixed(2)} cUSD" worth of clothes.`)
 
